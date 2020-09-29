@@ -70,7 +70,7 @@ int main(int argc, char** argv)
 	
 	std::string command = std::string(argv[1]);
 	std::transform(command.begin(), command.end(), command.begin(),
-			[](unsigned char c) { return std::tolower(c); });
+			[](unsigned char c) { return char(std::tolower(c)); });
 	
 	if(command == "help")
 	{
@@ -94,7 +94,7 @@ int main(int argc, char** argv)
 	std::ifstream input_stream(in_file, std::ios_base::binary);
 
 	input_stream.seekg(0, std::ios_base::end);
-	const auto input_length = input_stream.tellg();
+	const int input_length = int(input_stream.tellg());
 	input_stream.seekg(0, std::ios_base::beg);
 
 	BYTE* file = new BYTE[input_length];
