@@ -1,12 +1,14 @@
 // This file is part of gneuoutil.
 // Copyright (c) 2020 Piotr "Xeno" Adamczyk
 
+// ReSharper disable CppClangTidyClangDiagnosticShorten64To32
+
 #include <vector>
 #include <iostream>
 #include <fstream>
 
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+#include <Windows.h>
 
 const BYTE nwr_encryption_key[] = {
 	0xF9, 0xAB, 0x50, 0xA1, 0x62, 0x3B, 0x03, 0xE0,
@@ -17,26 +19,26 @@ const BYTE nwr_encryption_key[] = {
 
 const DWORD nwr_encryption_key_length = 0x20;
 
-BYTE* nw_decrypt_resource(BYTE* data, DWORD length, DWORD offset)
+BYTE* nw_decrypt_resource(BYTE* data, int length, DWORD offset)
 {
-	BYTE* cptr = data;
-	for (int i = 0; i < length; i++)
+	BYTE* c_ptr = data;
+	for (auto i = 0; i < length; i++)
 	{
-		DWORD key_offset = (DWORD)(cptr + (offset - (DWORD)data)) % nwr_encryption_key_length;
-		*cptr = (*cptr + 0x8dU ^ *(BYTE*)(nwr_encryption_key + key_offset)) + 0x8c;
-		cptr += 1;
+		const DWORD key_offset = reinterpret_cast<DWORD>(c_ptr + (offset - reinterpret_cast<DWORD>(data))) % nwr_encryption_key_length;
+		*c_ptr = (*c_ptr + 0x8dU ^ *const_cast<BYTE*>(nwr_encryption_key + key_offset)) + 0x8c;
+		c_ptr += 1;
 	}
 	return data;
 }
 
-BYTE* nw_encrypt_resource(BYTE* data, DWORD length, DWORD offset)
+BYTE* nw_encrypt_resource(BYTE* data, int length, DWORD offset)
 {
-	BYTE* cptr = data;
-	for (int i = 0; i < length; i++)
+	BYTE* c_ptr = data;
+	for (auto i = 0; i < length; i++)
 	{
-		DWORD key_offset = (DWORD)(cptr + (offset - (DWORD)data)) % nwr_encryption_key_length;
-		*cptr = (*cptr + 0x74U ^ *(BYTE*)(nwr_encryption_key + key_offset)) + 0x73;
-		cptr += 1;
+		const DWORD key_offset = reinterpret_cast<DWORD>(c_ptr + (offset - reinterpret_cast<DWORD>(data))) % nwr_encryption_key_length;
+		*c_ptr = (*c_ptr + 0x74U ^ *const_cast<BYTE*>(nwr_encryption_key + key_offset)) + 0x73;
+		c_ptr += 1;
 	}
 	return data;
 }
@@ -47,16 +49,16 @@ int main(int argc, char** argv)
 	std::ifstream infile(argv[1], std::ios_base::binary);
 
 	infile.seekg(0, std::ios_base::end);
-	const size_t length = infile.tellg();
+	const auto length = infile.tellg();
 	infile.seekg(0, std::ios_base::beg);
 
 	BYTE* file = new BYTE[length];
-	infile.read((char*)file, length);
+	infile.read(reinterpret_cast<char*>(file), length);
 	nw_decrypt_resource(file, length, 0);
 	std::ofstream outfile(std::string(argv[1]) + ".dec", std::ios_base::binary);
-	outfile.write((const char*)file, length);
+	outfile.write(reinterpret_cast<const char*>(file), length);
 	nw_encrypt_resource(file, length, 0);
 	std::ofstream outfile2(std::string(argv[1]) + ".dec.enc", std::ios_base::binary);
-	outfile2.write((const char*)file, length);
-	delete file;
+	outfile2.write(reinterpret_cast<const char*>(file), length);
+	delete[] file;
 }
