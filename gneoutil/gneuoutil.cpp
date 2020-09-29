@@ -3,12 +3,19 @@
 
 // ReSharper disable CppClangTidyClangDiagnosticShorten64To32
 
-#include <vector>
-#include <iostream>
+#define VERSION "1.0.0"
+
+#include <algorithm>
 #include <fstream>
+#include <iostream>
+#include <string>
+#include <vector>
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
+
+using std::cout;
+using std::endl;
 
 const BYTE nwr_encryption_key[] = {
 	0xF9, 0xAB, 0x50, 0xA1, 0x62, 0x3B, 0x03, 0xE0,
@@ -43,22 +50,70 @@ BYTE* nw_encrypt_resource(BYTE* data, int length, DWORD offset)
 	return data;
 }
 
+void usage()
+{
+	cout << "Example usage:" << endl
+		<< "  gneuoutil decrypt <in_file.nwr> <out_file.nos>" << endl
+		<< "  gneuoutil encrypt <in_file.nos> <out_file.nwr>" << endl
+		<< "  gneuoutil help" << endl;
+}
 
 int main(int argc, char** argv)
 {
-	std::ifstream infile(argv[1], std::ios_base::binary);
+	cout << "gneuoutil " << VERSION " (" << __DATE__ << " " __TIME__ << ")" << endl;
 
-	infile.seekg(0, std::ios_base::end);
-	const auto length = infile.tellg();
-	infile.seekg(0, std::ios_base::beg);
+	if (argc < 2)
+	{
+		usage();
+		return 1;
+	}
+	
+	std::string command = std::string(argv[1]);
+	std::transform(command.begin(), command.end(), command.begin(),
+			[](unsigned char c) { return std::tolower(c); });
+	
+	if(command == "help")
+	{
+		usage();
+		cout << endl << "\x67\x6e\x65\x75\x67\x6e\x65\x75\x67\x6e\x65\x75\x20\x62\x6c"
+		     << "\x6f\x77\x61\x20\x74\x68\x69\x6e\x6b\x20\x68\x65\x20\x67\x6f\x6f\x64"
+		     << "\x20\x7e\x20\x42\x6c\x6f\x77\x61\x2c\x20\x41\x70\x72\x20\x30\x38\x20"
+			 << "\x32\x30\x32\x30" << endl;
+		return 0;
+	}
 
-	BYTE* file = new BYTE[length];
-	infile.read(reinterpret_cast<char*>(file), length);
-	nw_decrypt_resource(file, length, 0);
-	std::ofstream outfile(std::string(argv[1]) + ".dec", std::ios_base::binary);
-	outfile.write(reinterpret_cast<const char*>(file), length);
-	nw_encrypt_resource(file, length, 0);
-	std::ofstream outfile2(std::string(argv[1]) + ".dec.enc", std::ios_base::binary);
-	outfile2.write(reinterpret_cast<const char*>(file), length);
+	if(argc != 4 || (command != "decrypt" && command != "encrypt"))
+	{
+		usage();
+		return 1;
+	}
+
+	const char* in_file = argv[2];
+	const char* out_file = argv[3];
+	
+	std::ifstream input_stream(in_file, std::ios_base::binary);
+
+	input_stream.seekg(0, std::ios_base::end);
+	const auto input_length = input_stream.tellg();
+	input_stream.seekg(0, std::ios_base::beg);
+
+	BYTE* file = new BYTE[input_length];
+	input_stream.read(reinterpret_cast<char*>(file), input_length);
+
+	if(command == "decrypt")
+	{
+		nw_decrypt_resource(file, input_length, 0);
+	}
+	else if (command == "encrypt")
+	{
+		nw_encrypt_resource(file, input_length, 0);
+	}
+	
+	std::ofstream output_stream(out_file, std::ios_base::binary);
+	output_stream.write(reinterpret_cast<const char*>(file), input_length);
+
+	cout << "Success!" << endl;
+
 	delete[] file;
+	return 0;
 }
